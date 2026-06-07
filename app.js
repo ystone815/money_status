@@ -1,5 +1,6 @@
 // Global State
 let dashboardData = null;
+let kbPortfolioData = null;
 let currentGoalType = 'pension'; // 'pension', 'investment', 'hui'
 let currentAssetFilter = 'all';
 
@@ -9,6 +10,7 @@ let trendChart = null;
 let goalChart = null;
 let projectionChart = null;
 let salaryChart = null;
+let stockCategoryChart = null;
 
 // Initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -52,6 +54,16 @@ async function fetchData() {
         }
         dashboardData = await response.json();
         
+        // Try load detailed stock portfolio
+        try {
+            const kbRes = await fetch("data/kb_portfolio.json");
+            if (kbRes.ok) {
+                kbPortfolioData = await kbRes.json();
+            }
+        } catch (e) {
+            console.error("Failed to load kb_portfolio.json", e);
+        }
+        
         // Initialize dashboard UI
         updateUI();
         initOverviewTab();
@@ -59,6 +71,10 @@ async function fetchData() {
         initGoalsTab();
         initProjectionTab();
         initStrategyTab();
+        
+        if (kbPortfolioData) {
+            initStockPortfolioTab();
+        }
         
     } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -955,5 +971,126 @@ function resizeCharts() {
         if (goalChart) goalChart.resize();
         if (projectionChart) projectionChart.resize();
         if (salaryChart) salaryChart.resize();
+        if (stockCategoryChart) stockCategoryChart.resize();
     }, 100);
+}
+
+// Detailed Stock Portfolio Tab Logic
+function initStockPortfolioTab() {
+    if (!kbPortfolioData) return;
+    
+    // 1. KPI elements
+    const totalVal = kbPortfolioData.total_value;
+    let totalReturn = 0;
+    
+    // Calculate category sums
+    const categorySums = {
+        "AI/반도체/테크": 0,
+        "배당/채권혼합": 0,
+        "금리/안전자산": 0,
+        "기타/현금": 0
+    };
+    
+    kbPortfolioData.holdings.forEach(item => {
+        totalReturn += item.return_amount;
+        if (categorySums[item.category] !== undefined) {
+            categorySums[item.category] += item.value;
+        }
+    });
+    
+    const totalInvested = totalVal - totalReturn;
+    const avgReturnRate = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
+    
+    // Update elements
+    document.getElementById("stock-total-value").innerText = totalVal.toLocaleString() + " 원";
+    
+    const returnAmtElem = document.getElementById("stock-total-return-amount");
+    returnAmtElem.innerText = (totalReturn >= 0 ? "+" : "") + totalReturn.toLocaleString() + " 원";
+    returnAmtElem.className = totalReturn >= 0 ? "kpi-value text-green" : "kpi-value text-red";
+    
+    const returnRateElem = document.getElementById("stock-total-return-rate");
+    returnRateElem.innerText = (avgReturnRate >= 0 ? "+" : "") + avgReturnRate.toFixed(2) + "%";
+    returnRateElem.className = avgReturnRate >= 0 ? "pct-badge text-green" : "pct-badge text-red";
+    
+    // 2. Render Sector/Theme Doughnut Chart
+    const ctx = document.getElementById("stockCategoryDoughnutChart").getContext("2d");
+    if (stockCategoryChart) {
+        stockCategoryChart.destroy();
+    }
+    
+    stockCategoryChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(categorySums),
+            datasets: [{
+                data: Object.values(categorySums),
+                backgroundColor: [
+                    '#8b5cf6', // purple (AI/반도체/테크)
+                    '#10b981', // green (배당/채권혼합)
+                    '#3b82f6', // blue (금리/안전자산)
+                    '#f59e0b'  // orange (기타/현금)
+                ],
+                borderWidth: 2,
+                borderColor: '#1e293b',
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#94a3b8',
+                        font: { family: 'Outfit, Noto Sans KR', size: 12 },
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.raw;
+                            const pct = ((val / totalVal) * 100).toFixed(1) + '%';
+                            return ` ${context.label}: ${val.toLocaleString()}원 (${pct})`;
+                        }
+                    }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+    
+    // 3. Render Holdings Table (Sorted by Weight Descending)
+    const tbody = document.getElementById("stock-list-tbody");
+    tbody.innerHTML = "";
+    
+    const sortedHoldings = [...kbPortfolioData.holdings].sort((a, b) => b.value - a.value);
+    
+    sortedHoldings.forEach(item => {
+        const tr = document.createElement("tr");
+        const pct = totalVal > 0 ? ((item.value / totalVal) * 100).toFixed(1) + '%' : '0%';
+        
+        // Badge color mapping
+        let badgeClass = "badge-other";
+        if (item.category === "AI/반도체/테크") badgeClass = "badge-pension";
+        else if (item.category === "배당/채권혼합") badgeClass = "badge-invest";
+        else if (item.category === "금리/안전자산") badgeClass = "badge-savings";
+        else if (item.category === "기타/현금") badgeClass = "badge-estate";
+        
+        const retSign = item.return_amount >= 0 ? "+" : "";
+        const retClass = item.return_amount > 0 ? "text-green font-numeric" : (item.return_amount < 0 ? "text-red font-numeric" : "font-numeric");
+        const rateSign = item.return_rate >= 0 ? "+" : "";
+        const rateClass = item.return_rate > 0 ? "text-green font-numeric" : (item.return_rate < 0 ? "text-red font-numeric" : "font-numeric");
+        
+        tr.innerHTML = `
+            <td class="font-weight-500">${item.name}</td>
+            <td><span class="table-badge ${badgeClass}">${item.category}</span></td>
+            <td class="text-right font-numeric">${item.value.toLocaleString()}</td>
+            <td class="text-right ${retClass}">${item.return_amount ? retSign + item.return_amount.toLocaleString() : '-'}</td>
+            <td class="text-right ${rateClass}">${item.return_rate !== 0 ? rateSign + (item.return_rate * 100).toFixed(2) + '%' : '-'}</td>
+            <td class="text-right font-numeric text-secondary">${pct}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }

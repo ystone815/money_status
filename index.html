@@ -51,6 +51,10 @@
                     <i data-lucide="shield-check"></i>
                     <span>연금 운용 전략</span>
                 </button>
+                <button class="nav-item" data-tab="tab-portfolio-details" id="btn-nav-portfolio-details">
+                    <i data-lucide="pie-chart"></i>
+                    <span>주식 포트폴리오</span>
+                </button>
             </nav>
             <div class="sidebar-footer">
                 <span class="update-tag">최근 업데이트: <span id="latest-update-date">-</span></span>
@@ -337,6 +341,69 @@
                     </div>
                     <div class="chart-medium-wrapper">
                         <canvas id="salaryHistoryChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Detailed Stock Portfolio -->
+            <section id="tab-portfolio-details" class="tab-content">
+                <!-- KPI Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon icon-financial"><i data-lucide="database"></i></div>
+                            <span class="kpi-title">주식/ETF 총 자산</span>
+                        </div>
+                        <div class="kpi-body">
+                            <h3 class="kpi-value" id="stock-total-value">- 원</h3>
+                            <p class="kpi-subtext">주식 계좌 총 평가액</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="kpi-stock-return">
+                        <div class="kpi-header">
+                            <div class="kpi-icon icon-estate"><i data-lucide="trending-up"></i></div>
+                            <span class="kpi-title">총 평가 손익</span>
+                        </div>
+                        <div class="kpi-body">
+                            <h3 class="kpi-value" id="stock-total-return-amount">- 원</h3>
+                            <p class="kpi-subtext">평균 수익률 <span class="pct-badge" id="stock-total-return-rate">-%</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Category Chart -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>섹터/테마별 비중</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="stockCategoryDoughnutChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Holdings Table -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>종목별 상세 현황</h3>
+                        </div>
+                        <div class="table-container compact" style="max-height: 480px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>종목명</th>
+                                        <th>분류</th>
+                                        <th class="text-right">평가액 (원)</th>
+                                        <th class="text-right">평가손익 (원)</th>
+                                        <th class="text-right">수익률</th>
+                                        <th class="text-right">비중</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-list-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
