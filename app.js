@@ -310,14 +310,20 @@ function initTrendTab() {
         trendChart.destroy();
     }
     
+    const netAssetsData = trendData.map(d => ({ x: new Date(d.date).getTime(), y: d.net_assets }));
+    const realEstateData = trendData.map(d => ({ x: new Date(d.date).getTime(), y: d.real_estate }));
+    const savingsData = trendData.map(d => ({ x: new Date(d.date).getTime(), y: d.savings }));
+    const insurancePensionData = trendData.map(d => ({ x: new Date(d.date).getTime(), y: d.insurance_pension }));
+    const investmentData = trendData.map(d => ({ x: new Date(d.date).getTime(), y: d.investment }));
+    const huiData = trendData.map(d => ({ x: new Date(d.date).getTime(), y: d.hui }));
+
     trendChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
             datasets: [
                 {
                     label: '순자산 합계',
-                    data: netAssets,
+                    data: netAssetsData,
                     borderColor: '#f8fafc',
                     borderWidth: 3,
                     pointBackgroundColor: '#f8fafc',
@@ -327,7 +333,7 @@ function initTrendTab() {
                 },
                 {
                     label: '부동산',
-                    data: realEstate,
+                    data: realEstateData,
                     borderColor: '#f59e0b',
                     borderWidth: 2,
                     pointBackgroundColor: '#f59e0b',
@@ -337,7 +343,7 @@ function initTrendTab() {
                 },
                 {
                     label: '예적금',
-                    data: savings,
+                    data: savingsData,
                     borderColor: '#3b82f6',
                     borderWidth: 2,
                     pointBackgroundColor: '#3b82f6',
@@ -347,7 +353,7 @@ function initTrendTab() {
                 },
                 {
                     label: '보험/연금',
-                    data: insurancePension,
+                    data: insurancePensionData,
                     borderColor: '#8b5cf6',
                     borderWidth: 2,
                     pointBackgroundColor: '#8b5cf6',
@@ -357,7 +363,7 @@ function initTrendTab() {
                 },
                 {
                     label: '투자자산',
-                    data: investment,
+                    data: investmentData,
                     borderColor: '#10b981',
                     borderWidth: 2,
                     pointBackgroundColor: '#10b981',
@@ -367,7 +373,7 @@ function initTrendTab() {
                 },
                 {
                     label: '휴이',
-                    data: hui,
+                    data: huiData,
                     borderColor: '#f43f5e',
                     borderWidth: 2,
                     pointBackgroundColor: '#f43f5e',
@@ -390,16 +396,31 @@ function initTrendTab() {
                 },
                 tooltip: {
                     callbacks: {
+                        title: function(context) {
+                            const timestamp = context[0].raw.x;
+                            const date = new Date(timestamp);
+                            return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+                        },
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${formatShortKRW(context.raw)}`;
+                            return ` ${context.dataset.label}: ${formatShortKRW(context.raw.y)}`;
                         }
                     }
                 }
             },
             scales: {
                 x: {
+                    type: 'linear',
                     grid: { color: 'rgba(255, 255, 255, 0.03)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+                    ticks: {
+                        color: '#94a3b8',
+                        font: { family: 'Outfit, Noto Sans KR' },
+                        callback: function(value) {
+                            const date = new Date(value);
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            return `${y}-${m}`;
+                        }
+                    }
                 },
                 y: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
