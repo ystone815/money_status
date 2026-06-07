@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자산관리 시각화 대시보드</title>
+    <meta name="description" content="엑셀 데이터를 기반으로 시각화한 지능형 개인 자산관리 및 목표 달성 대시보드입니다.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Glows -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i data-lucide="line-chart"></i>
+                </div>
+                <h2>WealthFlow</h2>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="tab-overview" id="btn-nav-overview">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>종합 자산 현황</span>
+                </button>
+                <button class="nav-item" data-tab="tab-trend" id="btn-nav-trend">
+                    <i data-lucide="trending-up"></i>
+                    <span>자산 성장 추이</span>
+                </button>
+                <button class="nav-item" data-tab="tab-goals" id="btn-nav-goals">
+                    <i data-lucide="target"></i>
+                    <span>목표 시뮬레이션</span>
+                </button>
+                <button class="nav-item" data-tab="tab-projection" id="btn-nav-projection">
+                    <i data-lucide="milestone"></i>
+                    <span>미래 현금 흐름</span>
+                </button>
+                <button class="nav-item" data-tab="tab-strategy" id="btn-nav-strategy">
+                    <i data-lucide="shield-check"></i>
+                    <span>연금 운용 전략</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="update-tag">최근 업데이트: <span id="latest-update-date">-</span></span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h1 id="main-heading">자산관리 대시보드</h1>
+                    <p class="subtitle">개인 자산 포트폴리오 분석 및 은퇴 준비 시뮬레이터</p>
+                </div>
+                <div class="header-stats">
+                    <div class="header-stat-card">
+                        <span class="stat-label">총 순자산</span>
+                        <span class="stat-value" id="top-net-assets">- 만원</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tab: Overview -->
+            <section id="tab-overview" class="tab-content active">
+                <!-- KPI Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card" id="kpi-realestate">
+                        <div class="kpi-header">
+                            <div class="kpi-icon icon-estate"><i data-lucide="home"></i></div>
+                            <span class="kpi-title">부동산 (전세금)</span>
+                        </div>
+                        <div class="kpi-body">
+                            <h3 class="kpi-value" id="kpi-val-estate">-</h3>
+                            <p class="kpi-subtext">실물 자산 비중 <span class="pct-badge" id="kpi-pct-estate">-%</span></p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="kpi-financial">
+                        <div class="kpi-header">
+                            <div class="kpi-icon icon-financial"><i data-lucide="wallet"></i></div>
+                            <span class="kpi-title">금융 자산 (적금/투자)</span>
+                        </div>
+                        <div class="kpi-body">
+                            <h3 class="kpi-value" id="kpi-val-financial">-</h3>
+                            <p class="kpi-subtext">유동성 자산 비중 <span class="pct-badge" id="kpi-pct-financial">-%</span></p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="kpi-pension">
+                        <div class="kpi-header">
+                            <div class="kpi-icon icon-pension"><i data-lucide="piggy-bank"></i></div>
+                            <span class="kpi-title">보험 / 연금 자산</span>
+                        </div>
+                        <div class="kpi-body">
+                            <h3 class="kpi-value" id="kpi-val-pension">-</h3>
+                            <p class="kpi-subtext">노후 자산 비중 <span class="pct-badge" id="kpi-pct-pension">-%</span></p>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="kpi-hui">
+                        <div class="kpi-header">
+                            <div class="kpi-icon icon-hui"><i data-lucide="heart"></i></div>
+                            <span class="kpi-title">휴이 자산</span>
+                        </div>
+                        <div class="kpi-body">
+                            <h3 class="kpi-value" id="kpi-val-hui">-</h3>
+                            <p class="kpi-subtext">목적 세부 자산 비중 <span class="pct-badge" id="kpi-pct-hui">-%</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mid Grid: Portfolio Chart & Assets Table -->
+                <div class="dashboard-grid">
+                    <!-- Chart Card -->
+                    <div class="grid-card glass-panel" id="card-portfolio-chart">
+                        <div class="card-header">
+                            <h3>자산 구성 포트폴리오</h3>
+                            <span class="info-tag">현재 비중</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="portfolioDoughnutChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Assets List Table -->
+                    <div class="grid-card glass-panel" id="card-asset-table">
+                        <div class="card-header">
+                            <h3>자산 세부 내역</h3>
+                            <div class="filters">
+                                <button class="filter-btn active" data-filter="all" id="btn-filter-all">전체</button>
+                                <button class="filter-btn" data-filter="부동산" id="btn-filter-estate">부동산</button>
+                                <button class="filter-btn" data-filter="예적금" id="btn-filter-savings">예적금</button>
+                                <button class="filter-btn" data-filter="보험/연금" id="btn-filter-pension">연금</button>
+                                <button class="filter-btn" data-filter="투자" id="btn-filter-invest">투자</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="table-assets">
+                                <thead>
+                                    <tr>
+                                        <th>분류</th>
+                                        <th>자산 항목명</th>
+                                        <th class="text-right">평가액 (만원)</th>
+                                        <th class="text-right">비중</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="asset-list-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Trend -->
+            <section id="tab-trend" class="tab-content">
+                <div class="grid-card glass-panel">
+                    <div class="card-header">
+                        <h3>시간 경과에 따른 자산 성장 추이</h3>
+                        <div class="trend-controls">
+                            <span class="info-tag">시계열 분석</span>
+                        </div>
+                    </div>
+                    <div class="chart-large-wrapper">
+                        <canvas id="assetTrendLineChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid margin-top">
+                    <!-- Growth rate and YoY stats -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>연간 대비 성장률</h3>
+                        </div>
+                        <div class="trend-stats">
+                            <div class="trend-stat-row">
+                                <div class="trend-stat-label">
+                                    <span class="dot dot-green"></span>
+                                    <span>최근 1년 자산 증감액</span>
+                                </div>
+                                <div class="trend-stat-val text-green" id="yoy-amount">- 만원</div>
+                            </div>
+                            <div class="trend-stat-row">
+                                <div class="trend-stat-label">
+                                    <span class="dot dot-blue"></span>
+                                    <span>총 자산 대비 연성장률</span>
+                                </div>
+                                <div class="trend-stat-val" id="yoy-percentage">-%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historical checkpoints table -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>자산 기록 이력</h3>
+                        </div>
+                        <div class="table-container compact">
+                            <table class="data-table" id="table-history">
+                                <thead>
+                                    <tr>
+                                        <th>기록일자</th>
+                                        <th class="text-right">순자산 (만원)</th>
+                                        <th class="text-right">전월비 변동</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-list-tbody">
+                                    <!-- Dynamic history records -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Goals -->
+            <section id="tab-goals" class="tab-content">
+                <div class="goal-tabs">
+                    <button class="goal-tab-btn active" data-goal="pension" id="btn-goal-pension">
+                        <i data-lucide="award"></i> 연금 목표 시뮬레이션
+                    </button>
+                    <button class="goal-tab-btn" data-goal="investment" id="btn-goal-investment">
+                        <i data-lucide="trending-up"></i> 투자 목표 시뮬레이션
+                    </button>
+                    <button class="goal-tab-btn" data-goal="hui" id="btn-goal-hui">
+                        <i data-lucide="gift"></i> 휴이 목표 시뮬레이션
+                    </button>
+                </div>
+
+                <div class="grid-card glass-panel">
+                    <div class="card-header">
+                        <h3 id="goal-chart-title">목표액 대비 실제 누적액 비교</h3>
+                        <p class="chart-subtitle">실제 자산 증가 추이와 이율별(6%, 8%, 10%) 시뮬레이션 곡선 비교</p>
+                    </div>
+                    <div class="chart-large-wrapper">
+                        <canvas id="goalSimulationChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Projection -->
+            <section id="tab-projection" class="tab-content">
+                <div class="grid-card glass-panel">
+                    <div class="card-header">
+                        <h3>장기 자산 전망 및 은퇴 시뮬레이션</h3>
+                        <p class="chart-subtitle">인플레이션 3% 반영 세후 급여, 저축액 및 연령별 자산 누적 곡선</p>
+                    </div>
+                    <div class="chart-large-wrapper">
+                        <canvas id="futureProjectionChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid margin-top">
+                    <!-- Events / Milestones -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>은퇴 및 미래 주요 이벤트 일정</h3>
+                        </div>
+                        <div class="timeline" id="future-timeline">
+                            <!-- Dynamic timeline events -->
+                        </div>
+                    </div>
+
+                    <!-- Cash flow details -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>수입/지출 구조 요약 (초기)</h3>
+                        </div>
+                        <div class="cashflow-summary">
+                            <div class="cashflow-row">
+                                <span class="cashflow-lbl">연 세후 급여 (2025년 기준)</span>
+                                <span class="cashflow-val" id="cf-salary">- 만원</span>
+                            </div>
+                            <div class="cashflow-row">
+                                <span class="cashflow-lbl">연 생활비</span>
+                                <span class="cashflow-val" id="cf-living">- 만원</span>
+                            </div>
+                            <div class="cashflow-row">
+                                <span class="cashflow-lbl">저축/투자 재원 (연간 잉여금)</span>
+                                <span class="cashflow-val text-green" id="cf-surplus">- 만원</span>
+                            </div>
+                            <hr class="divider">
+                            <div class="cashflow-allocation" id="cf-allocations">
+                                <!-- Dynamic allocation breakdown -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Strategy -->
+            <section id="tab-strategy" class="tab-content">
+                <!-- Strategy Cards (Dynamic) -->
+                <div class="strategy-grid" id="strategy-cards-container">
+                    <!-- Dynamic pension account cards -->
+                </div>
+
+                <!-- Strategy Detailed Info Table -->
+                <div class="grid-card glass-panel margin-top">
+                    <div class="card-header">
+                        <h3>연금 저축 / IRP / ISA 상세 가이드</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>구분</th>
+                                    <th>공제 금액 (만원)</th>
+                                    <th>연간 한도</th>
+                                    <th>세제 혜택</th>
+                                    <th>최소 의무 기간 / 출금</th>
+                                    <th>안전자산 비율</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategy-table-tbody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Salary Growth History -->
+                <div class="grid-card glass-panel margin-top">
+                    <div class="card-header">
+                        <h3>연봉 성장 이력 (영석)</h3>
+                    </div>
+                    <div class="chart-medium-wrapper">
+                        <canvas id="salaryHistoryChart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- JS Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
