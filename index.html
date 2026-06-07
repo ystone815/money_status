@@ -255,13 +255,66 @@
 
             <!-- Tab: Projection -->
             <section id="tab-projection" class="tab-content">
-                <div class="grid-card glass-panel">
-                    <div class="card-header">
-                        <h3>장기 자산 전망 및 은퇴 시뮬레이션</h3>
-                        <p class="chart-subtitle">인플레이션 3% 반영 세후 급여, 저축액 및 연령별 자산 누적 곡선</p>
+                <div class="dashboard-grid">
+                    <!-- Simulator Controls -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>시뮬레이션 변수 설정</h3>
+                            <span class="info-tag">실시간 대화형</span>
+                        </div>
+                        <div class="simulator-controls" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                            <!-- 은퇴 연령 -->
+                            <div class="control-group">
+                                <div class="control-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                                    <span class="control-label" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">은퇴 연령</span>
+                                    <span class="control-value" id="val-sim-retire-age" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">58세</span>
+                                </div>
+                                <input type="range" id="input-sim-retire-age" min="45" max="75" value="58" style="width: 100%;">
+                            </div>
+                            <!-- 연 세후 소득 -->
+                            <div class="control-group">
+                                <div class="control-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                                    <span class="control-label" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">연 세후 소득</span>
+                                    <span class="control-value" id="val-sim-income" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">9,000만원</span>
+                                </div>
+                                <input type="range" id="input-sim-income" min="5000" max="25000" step="500" value="9000" style="width: 100%;">
+                            </div>
+                            <!-- 연 생활비 -->
+                            <div class="control-group">
+                                <div class="control-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                                    <span class="control-label" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">연간 생활비</span>
+                                    <span class="control-value" id="val-sim-expenses" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">5,000만원</span>
+                                </div>
+                                <input type="range" id="input-sim-expenses" min="2000" max="15000" step="200" value="5000" style="width: 100%;">
+                            </div>
+                            <!-- 기대수익률 -->
+                            <div class="control-group">
+                                <div class="control-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                                    <span class="control-label" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">기대 투자 수익률</span>
+                                    <span class="control-value" id="val-sim-return" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">6.0%</span>
+                                </div>
+                                <input type="range" id="input-sim-return" min="1.0" max="15.0" step="0.5" value="6.0" style="width: 100%;">
+                            </div>
+                            <!-- 인플레이션율 -->
+                            <div class="control-group">
+                                <div class="control-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                                    <span class="control-label" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">예상 인플레이션율</span>
+                                    <span class="control-value" id="val-sim-inflation" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">3.0%</span>
+                                </div>
+                                <input type="range" id="input-sim-inflation" min="0.0" max="8.0" step="0.2" value="3.0" style="width: 100%;">
+                            </div>
+                        </div>
                     </div>
-                    <div class="chart-large-wrapper">
-                        <canvas id="futureProjectionChart"></canvas>
+
+                    <!-- Simulator Chart -->
+                    <div class="grid-card glass-panel">
+                        <div class="card-header">
+                            <h3>장기 자산 전망 및 은퇴 시뮬레이션</h3>
+                            <span class="info-tag">30개년 전망</span>
+                        </div>
+                        <div class="chart-large-wrapper" style="height: 380px;">
+                            <canvas id="futureProjectionChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -283,7 +336,7 @@
                         </div>
                         <div class="cashflow-summary">
                             <div class="cashflow-row">
-                                <span class="cashflow-lbl">연 세후 급여 (2025년 기준)</span>
+                                <span class="cashflow-lbl">연 세후 소득</span>
                                 <span class="cashflow-val" id="cf-salary">- 만원</span>
                             </div>
                             <div class="cashflow-row">

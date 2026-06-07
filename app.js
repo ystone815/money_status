@@ -626,172 +626,330 @@ function renderGoalChart() {
     });
 }
 
-// Future Projection Tab Logic
+// Future Projection Tab Logic (Interactive Simulator)
 function initProjectionTab() {
-    const projData = dashboardData.future_cash_flow_projection;
-    if (!projData || projData.length === 0) return;
+    // 1. Get initial values from current assets
+    const items = dashboardData.current_assets.items;
+    let initEstate = 0, initSavings = 0, initPension = 0, initInvest = 0, initHui = 0;
     
-    // Select data from 2025 onwards (limit to around 20 years to avoid chart clutter)
-    const displayData = projData.slice(0, 25);
-    
-    const years = displayData.map(d => `${d.year}년`);
-    const totalAssets = displayData.map(d => d.total_assets);
-    
-    // Balance segments
-    const savings = displayData.map(d => d.bal_savings);
-    const pensionSavings = displayData.map(d => d.bal_pension_savings);
-    const companyPension = displayData.map(d => d.bal_company_pension);
-    const irp = displayData.map(d => d.bal_irp);
-    const isa = displayData.map(d => d.bal_isa);
-    const usStock = displayData.map(d => d.bal_us_stock);
-    const coin = displayData.map(d => d.bal_coin);
-    
-    const ctx = document.getElementById("futureProjectionChart").getContext("2d");
-    if (projectionChart) {
-        projectionChart.destroy();
+    items.forEach(item => {
+        if (item.type === "부동산") initEstate += item.value;
+        else if (item.type === "예적금") initSavings += item.value;
+        else if (item.type === "보험/연금" || item.type === "보험연금") initPension += item.value;
+        else if (item.type === "투자" || item.type === "코인") initInvest += item.value;
+        else if (item.type === "휴이") initHui += item.value;
+    });
+
+    // 2. Slider references
+    const retireAgeInput = document.getElementById("input-sim-retire-age");
+    const incomeInput = document.getElementById("input-sim-income");
+    const expensesInput = document.getElementById("input-sim-expenses");
+    const returnInput = document.getElementById("input-sim-return");
+    const inflationInput = document.getElementById("input-sim-inflation");
+
+    // 3. Attach slider events
+    [retireAgeInput, incomeInput, expensesInput, returnInput, inflationInput].forEach(input => {
+        if (input) {
+            input.addEventListener("input", () => {
+                updateSliderLabels();
+                runSimulation();
+            });
+        }
+    });
+
+    function updateSliderLabels() {
+        document.getElementById("val-sim-retire-age").innerText = retireAgeInput.value + "세";
+        document.getElementById("val-sim-income").innerText = Number(incomeInput.value).toLocaleString() + "만원";
+        document.getElementById("val-sim-expenses").innerText = Number(expensesInput.value).toLocaleString() + "만원";
+        document.getElementById("val-sim-return").innerText = Number(returnInput.value).toFixed(1) + "%";
+        document.getElementById("val-sim-inflation").innerText = Number(inflationInput.value).toFixed(1) + "%";
     }
-    
-    projectionChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: [
-                {
-                    type: 'line',
-                    label: '예상 총자산 합계',
-                    data: totalAssets,
-                    borderColor: '#f8fafc',
-                    borderWidth: 3.5,
-                    pointBackgroundColor: '#f8fafc',
-                    tension: 0.15,
-                    order: -1
-                },
-                {
-                    label: '예적금',
-                    data: savings,
-                    backgroundColor: '#3b82f6',
-                    stack: 'Stack0'
-                },
-                {
-                    label: '연금저축',
-                    data: pensionSavings,
-                    backgroundColor: '#8b5cf6',
-                    stack: 'Stack0'
-                },
-                {
-                    label: '회사연금',
-                    data: companyPension,
-                    backgroundColor: '#a855f7',
-                    stack: 'Stack0'
-                },
-                {
-                    label: 'IRP',
-                    data: irp,
-                    backgroundColor: '#6366f1',
-                    stack: 'Stack0'
-                },
-                {
-                    label: 'ISA',
-                    data: isa,
-                    backgroundColor: '#06b6d4',
-                    stack: 'Stack0'
-                },
-                {
-                    label: '미국직투',
-                    data: usStock,
-                    backgroundColor: '#10b981',
-                    stack: 'Stack0'
-                },
-                {
-                    label: '코인',
-                    data: coin,
-                    backgroundColor: '#f59e0b',
-                    stack: 'Stack0'
+
+    // Initialize labels
+    updateSliderLabels();
+
+    // 4. Simulation Engine
+    function runSimulation() {
+        const retireAge = parseInt(retireAgeInput.value);
+        const annualIncome = parseFloat(incomeInput.value);
+        const annualExpenses = parseFloat(expensesInput.value);
+        const investReturn = parseFloat(returnInput.value) / 100;
+        const inflation = parseFloat(inflationInput.value) / 100;
+
+        const startAge = 43; // Year 2026
+        const startYear = 2026;
+        const yearsToSimulate = 30; // 30 years projection
+
+        let currentEstate = initEstate;
+        let currentSavings = initSavings;
+        let currentPension = initPension;
+        let currentInvest = initInvest;
+        let currentHui = initHui;
+
+        const yearsLabels = [];
+        const totalAssetsData = [];
+        const estateData = [];
+        const savingsData = [];
+        const pensionData = [];
+        const investData = [];
+        const huiData = [];
+        const timelineEvents = [];
+
+        for (let i = 0; i < yearsToSimulate; i++) {
+            const year = startYear + i;
+            const age = startAge + i;
+            yearsLabels.push(`${year}년 (${age}세)`);
+
+            // Apply returns on existing assets
+            currentEstate = currentEstate * (1 + inflation);
+            currentSavings = currentSavings * (1 + Math.min(0.025, inflation));
+            currentPension = currentPension * (1 + Math.max(0.03, investReturn - 0.02));
+            currentInvest = currentInvest * (1 + investReturn);
+            currentHui = currentHui * (1 + investReturn * 0.8);
+
+            // Calculate current year income & expenses
+            let income = 0;
+            if (age < retireAge) {
+                // Salary grows at 2% annually
+                income = annualIncome * Math.pow(1 + 0.02, i);
+            } else if (age === retireAge) {
+                timelineEvents.push({
+                    year: year,
+                    event: `${retireAge}세 은퇴 시작 (소득 중단)`,
+                    desc: `자산 소득과 모아둔 적금/연금을 통해 은퇴 생활을 영위합니다.`
+                });
+            }
+
+            // Expenses grow at inflation
+            const expenses = annualExpenses * Math.pow(1 + inflation, i);
+            const surplus = income - expenses;
+
+            if (surplus > 0) {
+                // Surplus distribution logic
+                // Maximize pension contributions first, then invest, then save
+                const pensionContrib = Math.min(surplus * 0.3, 1800); // max 1800/yr to pension
+                const investContrib = surplus * 0.5;
+                const savingsContrib = surplus - pensionContrib - investContrib;
+
+                currentPension += pensionContrib;
+                currentInvest += investContrib;
+                currentSavings += savingsContrib;
+            } else {
+                // Deficit withdrawal logic (Withdraw to cover living expenses)
+                let deficit = Math.abs(surplus);
+
+                // Withdraw from savings first
+                if (currentSavings >= deficit) {
+                    currentSavings -= deficit;
+                    deficit = 0;
+                } else {
+                    deficit -= currentSavings;
+                    currentSavings = 0;
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            plugins: {
-                legend: {
-                    labels: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans KR' } }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return ` ${context.dataset.label}: ${formatShortKRW(context.raw)}`;
-                        }
+
+                // Withdraw from investments second
+                if (deficit > 0) {
+                    if (currentInvest >= deficit) {
+                        currentInvest -= deficit;
+                        deficit = 0;
+                    } else {
+                        deficit -= currentInvest;
+                        currentInvest = 0;
                     }
                 }
+
+                // Withdraw from pension third
+                if (deficit > 0) {
+                    if (currentPension >= deficit) {
+                        currentPension -= deficit;
+                        deficit = 0;
+                    } else {
+                        deficit -= currentPension;
+                        currentPension = 0;
+                    }
+                }
+
+                // If still deficit, subtract from estate (downsizing or debt)
+                if (deficit > 0) {
+                    currentEstate = Math.max(0, currentEstate - deficit);
+                }
+            }
+
+            const total = currentEstate + currentSavings + currentPension + currentInvest + currentHui;
+            totalAssetsData.push(Math.round(total));
+            estateData.push(Math.round(currentEstate));
+            savingsData.push(Math.round(currentSavings));
+            pensionData.push(Math.round(currentPension));
+            investData.push(Math.round(currentInvest));
+            huiData.push(Math.round(currentHui));
+
+            // Check for pension contribution end (e.g. 2028 or 3 years from start)
+            if (year === 2028) {
+                timelineEvents.push({
+                    year: 2028,
+                    event: "연금저축 납입 만료",
+                    desc: "계획에 따라 연금저축의 의무 납입 기간이 종료됩니다."
+                });
+            }
+
+            // Check for asset exhaustion
+            if (total <= 0 && !timelineEvents.some(e => e.event === "자산 소진 시점")) {
+                timelineEvents.push({
+                    year: year,
+                    event: "자산 소진 시점 ⚠️",
+                    desc: `${age}세 시점에 시뮬레이션 상의 총자산이 모두 소진됩니다. 소득을 높이거나 생활비를 줄여야 합니다.`
+                });
+            }
+        }
+
+        // 5. Draw Dynamic Chart
+        const ctx = document.getElementById("futureProjectionChart").getContext("2d");
+        if (projectionChart) {
+            projectionChart.destroy();
+        }
+
+        projectionChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: yearsLabels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: '예상 총자산 합계',
+                        data: totalAssetsData,
+                        borderColor: '#f8fafc',
+                        borderWidth: 3.5,
+                        pointBackgroundColor: '#f8fafc',
+                        tension: 0.15,
+                        order: -1
+                    },
+                    {
+                        label: '부동산',
+                        data: estateData,
+                        backgroundColor: '#f59e0b', // orange
+                        stack: 'Stack0'
+                    },
+                    {
+                        label: '예적금',
+                        data: savingsData,
+                        backgroundColor: '#3b82f6', // blue
+                        stack: 'Stack0'
+                    },
+                    {
+                        label: '보험/연금',
+                        data: pensionData,
+                        backgroundColor: '#8b5cf6', // purple
+                        stack: 'Stack0'
+                    },
+                    {
+                        label: '투자자산',
+                        data: investData,
+                        backgroundColor: '#10b981', // green
+                        stack: 'Stack0'
+                    },
+                    {
+                        label: '휴이자산',
+                        data: huiData,
+                        backgroundColor: '#f43f5e', // rose
+                        stack: 'Stack0'
+                    }
+                ]
             },
-            scales: {
-                x: {
-                    stacked: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.03)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
                 },
-                y: {
-                    stacked: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { 
-                        color: '#94a3b8', 
-                        font: { family: 'Outfit' },
-                        callback: function(value) {
-                            return (value / 10000).toFixed(1) + '억';
+                plugins: {
+                    legend: {
+                        labels: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans KR' } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${formatShortKRW(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                        ticks: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans KR' } }
+                    },
+                    y: {
+                        stacked: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { 
+                            color: '#94a3b8', 
+                            font: { family: 'Outfit' },
+                            callback: function(value) {
+                                return (value / 10000).toFixed(1) + '억';
+                            }
                         }
                     }
                 }
             }
-        }
-    });
-    
-    // Render timeline
-    const timelineElem = document.getElementById("future-timeline");
-    timelineElem.innerHTML = "";
-    
-    // Gather events
-    const events = projData.filter(d => d.event !== null && d.event !== "");
-    events.forEach(ev => {
-        const item = document.createElement("div");
-        item.className = "timeline-item";
-        
-        item.innerHTML = `
-            <div class="timeline-badge">${ev.year % 100}</div>
-            <div class="timeline-content">
-                <div class="timeline-header">
-                    <span class="timeline-year">${ev.year}년도</span>
-                    <span class="timeline-event">${ev.event}</span>
+        });
+
+        // 6. Update Timeline
+        const timelineElem = document.getElementById("future-timeline");
+        timelineElem.innerHTML = "";
+
+        // Sort events chronologically
+        const sortedEvents = timelineEvents.sort((a, b) => a.year - b.year);
+        sortedEvents.forEach(ev => {
+            const item = document.createElement("div");
+            item.className = "timeline-item";
+            
+            item.innerHTML = `
+                <div class="timeline-badge">${ev.year % 100}</div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <span class="timeline-year">${ev.year}년도</span>
+                        <span class="timeline-event">${ev.event}</span>
+                    </div>
+                    <p class="timeline-desc">${ev.desc}</p>
                 </div>
-                <p class="timeline-desc">예상 누적 자산액: <strong>${formatKRW(ev.total_assets)}</strong></p>
-            </div>
-        `;
-        timelineElem.appendChild(item);
-    });
-    
-    // Initial Cash flow values
-    const firstYearProj = projData[0]; // 2025 or start year
-    if (firstYearProj) {
-        document.getElementById("cf-salary").innerText = formatKRW(firstYearProj.net_salary);
-        document.getElementById("cf-living").innerText = formatKRW(firstYearProj.living_expenses);
-        document.getElementById("cf-surplus").innerText = formatKRW(firstYearProj.surplus);
+            `;
+            timelineElem.appendChild(item);
+        });
+
+        // 7. Update initial Cash Flow Summary
+        document.getElementById("cf-salary").innerText = formatKRW(annualIncome);
+        document.getElementById("cf-living").innerText = formatKRW(annualExpenses);
         
-        // Render allocation breakdown
+        const initialSurplus = annualIncome - annualExpenses;
+        const surplusElem = document.getElementById("cf-surplus");
+        surplusElem.innerText = formatKRW(initialSurplus);
+        surplusElem.className = initialSurplus >= 0 ? "cashflow-val text-green" : "cashflow-val text-red";
+
+        // Distribute surplus visual
         const allocContainer = document.getElementById("cf-allocations");
-        allocContainer.innerHTML = `
-            <h4 class="strategy-block-title">잉여금 분배 구조 (연간)</h4>
-            <div class="alloc-item"><span>연금저축 납입</span><span>${formatKRW(firstYearProj.contrib_pension_savings)}</span></div>
-            <div class="alloc-item"><span>IRP 납입</span><span>${formatKRW(firstYearProj.contrib_irp)}</span></div>
-            <div class="alloc-item"><span>ISA 납입</span><span>${formatKRW(firstYearProj.contrib_isa)}</span></div>
-            <div class="alloc-item"><span>미국 직투 납입</span><span>${formatKRW(firstYearProj.contrib_us_stock)}</span></div>
-            <div class="alloc-item"><span>코인 납입</span><span>${formatKRW(firstYearProj.contrib_coin)}</span></div>
-            <div class="alloc-item"><span>일반 예금 적립</span><span>${formatKRW(firstYearProj.contrib_savings)}</span></div>
-        `;
+        if (initialSurplus > 0) {
+            const pensionContrib = Math.min(initialSurplus * 0.3, 1800);
+            const investContrib = initialSurplus * 0.5;
+            const savingsContrib = initialSurplus - pensionContrib - investContrib;
+            
+            allocContainer.innerHTML = `
+                <h4 class="strategy-block-title">초기 잉여금 분배 구조 (연간)</h4>
+                <div class="alloc-item"><span>보험/연금 연간 적립</span><span>${formatKRW(pensionContrib)}</span></div>
+                <div class="alloc-item"><span>투자자산 연간 적립</span><span>${formatKRW(investContrib)}</span></div>
+                <div class="alloc-item"><span>예적금 연간 적립</span><span>${formatKRW(savingsContrib)}</span></div>
+            `;
+        } else {
+            allocContainer.innerHTML = `
+                <h4 class="strategy-block-title text-red">⚠️ 초기 예산 부족</h4>
+                <p class="strategy-desc">생활비가 수입보다 많습니다. 자산 소진 속도가 빨라질 수 있습니다.</p>
+            `;
+        }
     }
+
+    // Run first simulation
+    runSimulation();
 }
 
 // Strategy Tab Logic

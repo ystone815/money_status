@@ -19,10 +19,11 @@ def clean_value(val):
         return val_str
 
 def parse_excel():
-    excel_path = "자산관리_260530.xlsx"
-    if not os.path.exists(excel_path):
-        raise FileNotFoundError(f"Excel file not found at {excel_path}")
-        
+    xlsx_files = [f for f in os.listdir(".") if f.endswith(".xlsx")]
+    if not xlsx_files:
+        raise FileNotFoundError("No Excel files found in the current directory.")
+    excel_path = xlsx_files[0]
+    print(f"Parsing Excel file: {excel_path}")
     xl = pd.ExcelFile(excel_path)
     data = {}
     
@@ -195,55 +196,7 @@ def parse_excel():
                 pass
     data["salary_history"] = salary_list
     
-    # 7. Parse '미래' sheet (Long-term cash flow & asset projection)
-    df_future = xl.parse("미래")
-    future_proj = []
-    
-    # We find where rows start by checking row 1 headers
-    # Row 1 indices:
-    # Unnamed: 5 = 이벤트, Unnamed: 6 = 급여(세후), Unnamed: 8 = 생활비, Unnamed: 27 = 자산, etc.
-    # The actual data rows start at row 2 (idx 2)
-    # The year is in the '전세' column (which from idx 2 onwards has values like 2025, 2026, 2027)
-    
-    for idx, row in df_future.iloc[2:].iterrows():
-        year_f = row.get("전세")
-        if pd.notna(year_f):
-            try:
-                year_int = int(float(year_f))
-                
-                # Fetch asset values
-                future_proj.append({
-                    "year": year_int,
-                    "event": clean_value(row.get("Unnamed: 5")),
-                    "net_salary": clean_value(row.get("Unnamed: 6")),
-                    "additional_income": clean_value(row.get("Unnamed: 7")),
-                    "living_expenses": clean_value(row.get("Unnamed: 8")),
-                    "surplus": clean_value(row.get("Unnamed: 9")),
-                    "contrib_pension_savings": clean_value(row.get("Unnamed: 10")),
-                    "contrib_irp": clean_value(row.get("Unnamed: 11")),
-                    "contrib_isa": clean_value(row.get("Unnamed: 12")),
-                    "contrib_us_stock": clean_value(row.get("Unnamed: 13")),
-                    "contrib_coin": clean_value(row.get("Unnamed: 14")),
-                    "housing_expense": clean_value(row.get("Unnamed: 15")),
-                    "contrib_savings": clean_value(row.get("Unnamed: 16")),
-                    "contrib_company_pension": clean_value(row.get("Unnamed: 17")),
-                    "jeonse_deposit": clean_value(row.get("Unnamed: 18")),
-                    "buy_home": clean_value(row.get("Unnamed: 19")),
-                    # Balances
-                    "bal_savings": clean_value(row.get("Unnamed: 20")),
-                    "bal_pension_savings": clean_value(row.get("Unnamed: 21")),
-                    "bal_company_pension": clean_value(row.get("Unnamed: 22")),
-                    "bal_irp": clean_value(row.get("Unnamed: 23")),
-                    "bal_isa": clean_value(row.get("Unnamed: 24")),
-                    "bal_us_stock": clean_value(row.get("Unnamed: 25")),
-                    "bal_coin": clean_value(row.get("Unnamed: 26")),
-                    "total_assets": clean_value(row.get("Unnamed: 27")),
-                    "assets_delta": clean_value(row.get("Unnamed: 28"))
-                })
-            except ValueError:
-                pass
-                
-    data["future_cash_flow_projection"] = future_proj
+    # Note: '미래' sheet parsing removed. Simulation is now calculated dynamically in app.js.
 
     # Save to data/data.json
     os.makedirs("data", exist_ok=True)
